@@ -76,6 +76,9 @@ RUN helm3 repo add stable https://kubernetes-charts.storage.googleapis.com \
 # install helm push plugin
 RUN helm3 plugin install https://github.com/chartmuseum/helm-push
 
+# install yq, a yaml-query-tool
+RUN curl -L https://github.com/mikefarah/yq/releases/download/3.2.1/yq_linux_amd64 -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+
 # configure entrypoint
 COPY entrypoint.sh /usr/local/bin/entrypoint
 
