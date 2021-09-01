@@ -1,9 +1,10 @@
-FROM ubuntu:19.04
+FROM ubuntu:20.04
 
 ENV K8S_VERSION="1.14.8"
 ENV TF_VERSION="0.12.16"
 ENV HELM_VERSION="2.14.3"
 ENV HELM3_VERSION="3.1.0"
+ENV AWS_CLI_VERSION="2.2.34"
 
 ENV KUBECONFIG="/root/.local-kube/config"
 
@@ -18,10 +19,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   gpg \ 
   gpg-agent \
   groff \
-  python \
-  python-wheel \
   python-setuptools \
-  python-pip \
+  python3-pip \
   unzip \
   make \
   rsync \
@@ -29,7 +28,14 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   && rm -rf /var/cache/apt/
 
 # install aws-cli
-RUN pip install awscli --upgrade
+RUN pip install \
+    wheel \
+    --upgrade
+
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${AWS_CLI_VERSION}.zip" -o "awscliv2.zip" \
+    && unzip awscliv2.zip \
+    && ./aws/install \
+    && rm -rf awscliv2.zip ./aws
 
 # install aws-iam-authenticator
 RUN curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.14.6/2019-08-22/bin/linux/amd64/aws-iam-authenticator \
@@ -48,19 +54,6 @@ RUN curl -LO https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${
   && mv ./terraform /usr/local/bin/terraform \
   && rm terraform_${TF_VERSION}_linux_amd64.zip
 
-# install-helm-v2
-RUN curl -LO https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz \
-  && mkdir ./helm \
-  && tar -zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz -C ./helm \
-  && chmod +x ./helm/linux-amd64/helm \
-  && mv ./helm/linux-amd64/helm /usr/local/bin/helm2 \
-  && rm -rf ./helm helm-v${HELM_VERSION}-linux-amd64.tar.gz
-
-# configure helm-tiller plugin
-RUN helm2 init --client-only \
-  && helm2 plugin install https://github.com/rimusz/helm-tiller \
-  && helm2 tiller install
-
 # install helm-v3
 RUN curl -LO https://get.helm.sh/helm-v${HELM3_VERSION}-linux-amd64.tar.gz \
   && mkdir ./helm3 \
@@ -69,10 +62,6 @@ RUN curl -LO https://get.helm.sh/helm-v${HELM3_VERSION}-linux-amd64.tar.gz \
   && mv ./helm3/linux-amd64/helm /usr/local/bin/helm \
   && cp /usr/local/bin/helm /usr/local/bin/helm3 \
   && rm -rf ./helm3 helm-v${HELM3_VERSION}-linux-amd64.tar.gz
-
-# add helm-repo's
-RUN helm3 repo add stable https://kubernetes-charts.storage.googleapis.com \
-  && helm3 repo add incubator https://storage.googleapis.com/kubernetes-charts-incubator
 
 # install helm push plugin
 RUN helm3 plugin install https://github.com/chartmuseum/helm-push
